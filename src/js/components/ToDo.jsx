@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+
 
 export const ToDo = () => {
 	const [tarea, setTarea] = useState("");
@@ -8,30 +8,44 @@ export const ToDo = () => {
 	const [indiceEditando, setIndiceEditando] = useState(null);
 
 
-	const crearUsuario = async () => {
-		const response = await fetch("https://playground.4geeks.com/todo/users/angel", {
-			method: "POST"
-		})
-
-
-	}
-
-	const traerTareasUsuario = async () => {
-		const response = await fetch("https://playground.4geeks.com/todo/users/angel")
-		if (!response.ok) {
-			crearUsuario()
-			return
-		}
-		const data = await response.json()
-		console.log(data);
-		setLista(data.todos)
-
-
-	}
-
 	useEffect(() => {
 		traerTareasUsuario();
 	}, []);
+
+
+	const crearUsuario = async () => {
+		const response = await fetch("https://playground.4geeks.com/todo/users/angel", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify([])
+		});
+
+		if (response.ok) {
+			console.log("Usuario creado correctamente");
+			traerTareasUsuario();
+		} else {
+			const error = await response.json();
+			console.error("Error al crear usuario:", error);
+		}
+	};
+
+
+	const traerTareasUsuario = async () => {
+		const response = await fetch("https://playground.4geeks.com/todo/users/angel");
+		if (!response.ok) {
+			crearUsuario();
+			return;
+		}
+		const data = await response.json();
+
+		const tareasPendientes = data.todos.filter((tarea) => !tarea.is_done);
+		const tareasCompletadas = data.todos.filter((tarea) => tarea.is_done);
+
+		setLista([...tareasPendientes, ...tareasCompletadas]);
+	};
+
 
 	const crearTareaEnApi = async (nombreDeTarea) => {
 		const response = await fetch("https://playground.4geeks.com/todo/todos/angel", {
@@ -52,16 +66,27 @@ export const ToDo = () => {
 
 
 
-
-
-
 	const agregarTarea = async (evento) => {
 		evento.preventDefault();
 
-		if (!tarea.trim()) return;
-
 		if (modoEdicion) {
-			// modo edición aún no implementado con PUT
+			const tareaAEditar = lista[indiceEditando];
+
+			await fetch(`https://playground.4geeks.com/todo/todos/${tareaAEditar.id}`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					label: tarea,
+					is_done: tareaAEditar.is_done
+				})
+			});
+
+			setModoEdicion(false);
+			setIndiceEditando(null);
+			setTarea("");
+			traerTareasUsuario();
 			return;
 		}
 
@@ -70,25 +95,60 @@ export const ToDo = () => {
 		traerTareasUsuario();
 	};
 
-	const eliminarTarea = (index) => {
-		const nuevaLista = [
-			...lista.slice(0, index),
-			...lista.slice(index + 1),
-		];
-		setLista(nuevaLista);
-	};
-
-	const tareaTerminada = (index) => {
-		const tareaSeleccionada = { ...lista[index], completada: true };
-		const listaSinTarea = lista.filter((_, i) => i !== index);
-		setLista([...listaSinTarea, tareaSeleccionada]);
-	};
 
 	const modificarTarea = (index) => {
 		setModoEdicion(true);
 		setIndiceEditando(index);
 		setTarea(lista[index].label);
 	};
+
+
+
+
+	const eliminarTarea = async (index) => {
+		const tarea = lista[index];
+		const response = await fetch(`https://playground.4geeks.com/todo/todos/${tarea.id}`, {
+			method: "DELETE"
+		});
+
+		if (!response.ok) {
+			console.error("Error al eliminar tarea:", response.status);
+			return;
+		}
+
+		traerTareasUsuario();
+	};
+
+
+
+
+	const tareaTerminada = async (index) => {
+		const tarea = lista[index];
+
+		const response = await fetch(`https://playground.4geeks.com/todo/todos/${tarea.id}`, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				label: tarea.label,
+				is_done: true
+			})
+		});
+
+		if (!response.ok) {
+			console.error("Error al marcar como hecha:", response.status);
+			return;
+		}
+
+		traerTareasUsuario();
+	};
+
+
+
+
+
+
 
 	return (
 		<>
@@ -115,30 +175,30 @@ export const ToDo = () => {
 						lista.map((item, index) => (
 							<li
 								key={index}
-								className={`list-group-item d-flex justify-content-between align-items-center ${item.completada ? "bg-success text-white tarea-completada" : ""}`}
+								className={`list-group-item d-flex justify-content-between align-items-center ${item.is_done ? "bg-success text-white tarea-completada" : ""}`}
 							>
 								{item.label}
 								<div>
 									<button
-										className="btn btn-sm btn-primary me-2"
+										className="btn-li btn btn-sm btn-primary me-2"
 										onClick={() => modificarTarea(index)}
 										style={{
-											display: item.completada ? "none" : "inline-block",
+											display: item.is_done ? "none" : "inline-block",
 										}}
 									>
 										✏️
 									</button>
 									<button
-										className="btn btn-sm btn-danger me-2"
+										className="btn-li btn btn-sm btn-danger me-2"
 										onClick={() => eliminarTarea(index)}
 									>
 										❌
 									</button>
 									<button
-										className="btn btn-sm btn-success"
+										className="btn-li btn btn-sm btn-success"
 										onClick={() => tareaTerminada(index)}
 										style={{
-											display: item.completada ? "none" : "inline-block",
+											display: item.is_done ? "none" : "inline-block",
 										}}
 									>
 										✔️
