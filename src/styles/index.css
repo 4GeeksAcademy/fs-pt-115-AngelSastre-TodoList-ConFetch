@@ -24,6 +24,6 @@ body {
 }
 
 .btn-li:hover {
-	transform: scale(1.2); /* Aumenta un 20% el tamaño */
-	transition: transform 0.2s ease; /* para que se vea suave */
+	transform: scale(1.2);
+	transition: transform 0.2s ease;
 }

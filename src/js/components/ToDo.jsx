@@ -69,6 +69,8 @@ export const ToDo = () => {
 	const agregarTarea = async (evento) => {
 		evento.preventDefault();
 
+		if(tarea.trim() === "") return;
+
 		if (modoEdicion) {
 			const tareaAEditar = lista[indiceEditando];
 
